@@ -4,7 +4,9 @@
 #include "data.h"
 #include <fstream>
 #include <vector>
+#include <QFileDialog>
 #include <QMainWindow>
+#include <QMessageBox>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class JAPM; }
@@ -33,6 +35,10 @@ private:
     std::vector<data_t> data;
 
     void saveFile();
+    void readDataFromFile();
     void displayData();
+    data_t getData();
+    void clearInput();
+    void setTableData(int64_t, const data_t &);
 };
 #endif // JAPM_H
