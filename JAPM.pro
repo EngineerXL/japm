@@ -16,12 +16,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    data.cpp \
     main.cpp \
-    japm.cpp
+    japm.cpp \
+    pattern_text_search.cpp
 
 HEADERS += \
     data.h \
-    japm.h
+    japm.h \
+    pattern_text_search.h
 
 FORMS += \
     japm.ui

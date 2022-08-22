@@ -24,13 +24,16 @@ struct data_t {
     string info;
 
     data_t() {}
+    data_t(const vecstr &, const string &, const string &, const string &, const string &);
 
-    data_t(const vecstr & _tags, const string & _name, const string & _login, const string & _password, const string & _info) {
-        tags = _tags;
-        name = _name;
-        login = _login;
-        password = _password;
-        info = _info;
+    string tagsToString() const;
+
+    friend bool operator < (const data_t & lhs, const data_t & rhs) {
+        if (lhs.name != rhs.name) {
+            return lhs.name < rhs.name;
+        } else {
+            return lhs.login < rhs.login;
+        }
     }
 
     static void writeString(ostream & out, const string & s) {
