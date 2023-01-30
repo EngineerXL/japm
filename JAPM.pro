@@ -2,7 +2,7 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG += c++11
+CONFIG += c++17
 
 # The following define makes your compiler emit warnings if you use
 # any Qt feature that has been marked deprecated (the exact warnings
@@ -16,15 +16,22 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    data.cpp \
+    aes/aes.c \
+    data/data.cpp \
+    encrypter/encrypter_aes256.cpp \
     main.cpp \
     japm.cpp \
-    pattern_text_search.cpp
+    sha3/sha3.cpp \
+    substr/pattern_text_search.cpp
 
 HEADERS += \
-    data.h \
+    aes/aes.h \
+    aes/aes.hpp \
+    data/data.h \
+    encrypter/encrypter_aes256.h \
     japm.h \
-    pattern_text_search.h
+    sha3/sha3.h \
+    substr/pattern_text_search.h
 
 FORMS += \
     japm.ui

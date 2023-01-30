@@ -23,6 +23,17 @@ void JAPM::on_pushButtonSaveAs_clicked()
     saveFile();
 }
 
+bool JAPM::getKey() {
+    key = ui->lineEditMasterKey->text().toStdString();
+    if (key.empty()) {
+        QMessageBox::information(this, "Error", "Encryption key is empty");
+        return false;
+    } else {
+        encr.setKey(key);
+        return true;
+    }
+}
+
 void JAPM::on_pushButtonOpenFile_clicked()
 {
     QString fileName = QFileDialog::getOpenFileName(this, "Open file", ".");
@@ -32,19 +43,45 @@ void JAPM::on_pushButtonOpenFile_clicked()
     filterData();
 }
 
+void JAPM::infoBadFileOrKey() {
+    QMessageBox::information(this, "Error", "Encryption key is wrong or data file is corrupted");
+    data.clear();
+    displayData();
+}
+
 void JAPM::readDataFromFile() {
     if (!dataFile.isEmpty()) {
-        std::string fileStr;
+        if (!getKey()) {
+            return;
+        }
+        std::stringstream ascii;
         std::ifstream f;
         f.open(dataFile.toStdString());
-        std::getline(f, fileStr);
+        ascii << f.rdbuf();
         f.close();
+        std::string encrypted = ascii.str();
+        memcpy(savesCntPtr, encrypted.c_str(), sizeof(uint8_t) * CNT_BYTES_LEN);
+        memcpy(&savesCnt, savesCntPtr, sizeof(uint64_t));
+        encr.setIV(std::to_string(savesCnt));
+        std::string fileStr = encr.decrypt(encrypted.substr(CNT_BYTES_LEN, encrypted.size() - CNT_BYTES_LEN));
         std::stringstream stream(fileStr, std::ios_base::in);
         stream << std::noskipws;
         data.clear();
-        data_t elem;
-        while (stream >> elem) {
+        char c = DATA_DELIMITER;
+        while (c == DATA_DELIMITER) {
+            data_t elem;
+            try {
+                stream >> elem;
+            } catch (std::exception & ex) {
+                std::cerr << ex.what() << std::endl;
+                infoBadFileOrKey();
+                return;
+            }
             data.push_back(elem);
+            stream >> c;
+        }
+        if (c != DATA_END) {
+            infoBadFileOrKey();
         }
     }
 }
@@ -56,13 +93,28 @@ void JAPM::on_pushButtonSaveFile_clicked()
 
 void JAPM::saveFile() {
     if (!dataFile.isEmpty()) {
-        std::stringstream stream(std::ios_base::out);
-        for (data_t elem : data) {
-            stream << elem;
+        if (!getKey()) {
+            return;
         }
+        ++savesCnt;
+        memcpy(savesCntPtr, &savesCnt, sizeof(uint64_t));
+        encr.setIV(std::to_string(savesCnt));
+        std::stringstream cnt(std::ios_base::out);
+        for (size_t i = 0; i < CNT_BYTES_LEN; ++i) {
+            cnt << savesCntPtr[i];
+        }
+        std::stringstream stream(std::ios_base::out);
+        for (size_t i = 0; i < data.size(); ++i) {
+            if (i) {
+                stream << DATA_DELIMITER;
+            }
+            stream << data[i];
+        }
+        stream << DATA_END;
+        std::string encrypted = encr.encrypt(stream.str());
         std::ofstream f;
         f.open(dataFile.toStdString(), std::ios::binary);
-        f << stream.str();
+        f << cnt.str() << encrypted;
         f.close();
     }
 }
@@ -87,6 +139,7 @@ data_t JAPM::getData() {
 }
 
 void JAPM::clearInput() {
+    ui->lineEditTags->clear();
     ui->lineEditName->clear();
     ui->lineEditLogin->clear();
     ui->lineEditPassword->clear();

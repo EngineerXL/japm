@@ -76,7 +76,7 @@ struct data_t {
         char c;
         in >> c;
         if (c != DATA_BEGIN) {
-            return in;
+            throw std::runtime_error("Invalid data (begin of structure)!");
         }
         uint64_t n;
         in >> n;
