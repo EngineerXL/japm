@@ -51,10 +51,10 @@ void JAPM::readDataFromFile() {
             return;
         }
         std::ifstream f;
-        size_t encryptedSz;
+        uint64_t encryptedSz;
         f.open(dataFile.toStdString(), std::ios::binary);
         f.read((char *)&savesCnt, sizeof(uint64_t));
-        f.read((char *)&encryptedSz, sizeof(size_t));
+        f.read((char *)&encryptedSz, sizeof(uint64_t));
         std::string encrypted(encryptedSz, '\0');
         f.read((char *)encrypted.c_str(), sizeof(char) * encryptedSz);
         f.close();
@@ -99,11 +99,11 @@ void JAPM::saveFile() {
         }
         stream << DATA_END;
         std::string encrypted = encr.encrypt(stream.str());
-        size_t encryptedSz = encrypted.size();
+        uint64_t encryptedSz = encrypted.size();
         std::ofstream f;
         f.open(dataFile.toStdString(), std::ios::binary);
         f.write((char *)&savesCnt, sizeof(uint64_t));
-        f.write((char *)&encryptedSz, sizeof(size_t));
+        f.write((char *)&encryptedSz, sizeof(uint64_t));
         f.write((char *)encrypted.c_str(), sizeof(char) * encryptedSz);
         f.close();
     }
