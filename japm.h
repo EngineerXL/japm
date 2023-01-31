@@ -1,28 +1,30 @@
 #ifndef JAPM_H
 #define JAPM_H
 
-#include "./data/data.h"
-#include "./substr/pattern_text_search.h"
-#include "./encrypter/encrypter_aes256.h"
-#include <fstream>
-#include <vector>
 #include <QFileDialog>
 #include <QMainWindow>
 #include <QMessageBox>
+#include <fstream>
+#include <vector>
+
+#include "./data/data.h"
+#include "./encrypter/encrypter_aes256.h"
+#include "./substr/pattern_text_search.h"
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class JAPM; }
+namespace Ui {
+class JAPM;
+}
 QT_END_NAMESPACE
 
-class JAPM : public QMainWindow
-{
+class JAPM : public QMainWindow {
     Q_OBJECT
 
-public:
+   public:
     JAPM(QWidget *parent = nullptr);
     ~JAPM();
 
-private slots:
+   private slots:
     void on_pushButtonSaveAs_clicked();
 
     void on_pushButtonOpenFile_clicked();
@@ -45,11 +47,9 @@ private slots:
 
     void on_checkBoxCaseSensitive_stateChanged(int arg1);
 
-private:
+   private:
     Ui::JAPM *ui;
 
-    const static size_t CNT_BYTES_LEN = 8;
-    uint8_t savesCntPtr[CNT_BYTES_LEN];
     uint64_t savesCnt = 0;
 
     QString dataFile;
@@ -73,4 +73,4 @@ private:
     bool findByName(const std::string &, size_t &);
     bool getKey();
 };
-#endif // JAPM_H
+#endif  // JAPM_H

@@ -13,6 +13,8 @@ struct pattern_text_t {
     pattern_text_t(const string &, bool);
 
     bool searchIn(string);
+
+    std::vector<size_t> z_func(const std::string &);
 };
 
-#endif // PATTERN_TEXT_SEARCH_H
+#endif  // PATTERN_TEXT_SEARCH_H

@@ -1,22 +1,18 @@
 #include "japm.h"
+
 #include "ui_japm.h"
 
-JAPM::JAPM(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::JAPM)
-{
+JAPM::JAPM(QWidget *parent) : QMainWindow(parent), ui(new Ui::JAPM) {
     ui->setupUi(this);
     ui->checkBoxTags->setChecked(true);
-    ui->tableWidgetData->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ui->tableWidgetData->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::Stretch);
+    ui->radioButtonTags->setChecked(true);
 }
 
-JAPM::~JAPM()
-{
-    delete ui;
-}
+JAPM::~JAPM() { delete ui; }
 
-void JAPM::on_pushButtonSaveAs_clicked()
-{
+void JAPM::on_pushButtonSaveAs_clicked() {
     QString fileName = QFileDialog::getSaveFileName(this, "Save as", ".");
     ui->lineEditFileName->setText(fileName);
     dataFile = fileName;
@@ -34,8 +30,7 @@ bool JAPM::getKey() {
     }
 }
 
-void JAPM::on_pushButtonOpenFile_clicked()
-{
+void JAPM::on_pushButtonOpenFile_clicked() {
     QString fileName = QFileDialog::getOpenFileName(this, "Open file", ".");
     ui->lineEditFileName->setText(fileName);
     dataFile = fileName;
@@ -44,7 +39,8 @@ void JAPM::on_pushButtonOpenFile_clicked()
 }
 
 void JAPM::infoBadFileOrKey() {
-    QMessageBox::information(this, "Error", "Encryption key is wrong or data file is corrupted");
+    QMessageBox::information(
+        this, "Error", "Encryption key is wrong or data file is corrupted");
     data.clear();
     displayData();
 }
@@ -54,17 +50,16 @@ void JAPM::readDataFromFile() {
         if (!getKey()) {
             return;
         }
-        std::stringstream ascii;
         std::ifstream f;
-        f.open(dataFile.toStdString());
-        ascii << f.rdbuf();
+        size_t encryptedSz;
+        f.open(dataFile.toStdString(), std::ios::binary);
+        f.read((char *)&savesCnt, sizeof(uint64_t));
+        f.read((char *)&encryptedSz, sizeof(size_t));
+        std::string encrypted(encryptedSz, '\0');
+        f.read((char *)encrypted.c_str(), sizeof(char) * encryptedSz);
         f.close();
-        std::string encrypted = ascii.str();
-        memcpy(savesCntPtr, encrypted.c_str(), sizeof(uint8_t) * CNT_BYTES_LEN);
-        memcpy(&savesCnt, savesCntPtr, sizeof(uint64_t));
         encr.setIV(std::to_string(savesCnt));
-        std::string fileStr = encr.decrypt(encrypted.substr(CNT_BYTES_LEN, encrypted.size() - CNT_BYTES_LEN));
-        std::stringstream stream(fileStr, std::ios_base::in);
+        std::stringstream stream(encr.decrypt(encrypted), std::ios_base::in);
         stream << std::noskipws;
         data.clear();
         char c = DATA_DELIMITER;
@@ -72,7 +67,7 @@ void JAPM::readDataFromFile() {
             data_t elem;
             try {
                 stream >> elem;
-            } catch (std::exception & ex) {
+            } catch (std::exception &ex) {
                 std::cerr << ex.what() << std::endl;
                 infoBadFileOrKey();
                 return;
@@ -86,10 +81,7 @@ void JAPM::readDataFromFile() {
     }
 }
 
-void JAPM::on_pushButtonSaveFile_clicked()
-{
-    saveFile();
-}
+void JAPM::on_pushButtonSaveFile_clicked() { saveFile(); }
 
 void JAPM::saveFile() {
     if (!dataFile.isEmpty()) {
@@ -97,12 +89,7 @@ void JAPM::saveFile() {
             return;
         }
         ++savesCnt;
-        memcpy(savesCntPtr, &savesCnt, sizeof(uint64_t));
         encr.setIV(std::to_string(savesCnt));
-        std::stringstream cnt(std::ios_base::out);
-        for (size_t i = 0; i < CNT_BYTES_LEN; ++i) {
-            cnt << savesCntPtr[i];
-        }
         std::stringstream stream(std::ios_base::out);
         for (size_t i = 0; i < data.size(); ++i) {
             if (i) {
@@ -112,15 +99,19 @@ void JAPM::saveFile() {
         }
         stream << DATA_END;
         std::string encrypted = encr.encrypt(stream.str());
+        size_t encryptedSz = encrypted.size();
         std::ofstream f;
         f.open(dataFile.toStdString(), std::ios::binary);
-        f << cnt.str() << encrypted;
+        f.write((char *)&savesCnt, sizeof(uint64_t));
+        f.write((char *)&encryptedSz, sizeof(size_t));
+        f.write((char *)encrypted.c_str(), sizeof(char) * encryptedSz);
         f.close();
     }
 }
 
 std::vector<std::string> JAPM::getTags() {
-    std::stringstream stream(ui->lineEditTags->text().toStdString(), std::ios_base::in);
+    std::stringstream stream(ui->lineEditTags->text().toStdString(),
+                             std::ios_base::in);
     std::vector<std::string> res;
     std::string s;
     while (stream >> s) {
@@ -146,14 +137,19 @@ void JAPM::clearInput() {
     ui->lineEditInfo->clear();
 }
 
-void JAPM::on_pushButtonAddEntry_clicked()
-{
+void JAPM::on_pushButtonAddEntry_clicked() {
     data_t newElem = getData();
+    if (newElem.name.empty()) {
+        QMessageBox::information(this, "Error", "Empty entry name");
+        return;
+    }
     size_t id;
     bool exist = findByName(newElem.name, id);
     if (exist) {
         QMessageBox::StandardButton reply;
-        reply = QMessageBox::question(this, "Replace", "Entry already exists, replace?", QMessageBox::Yes | QMessageBox::No);
+        reply = QMessageBox::question(this, "Replace",
+                                      "Entry already exists, replace?",
+                                      QMessageBox::Yes | QMessageBox::No);
         if (reply == QMessageBox::Yes) {
             data[id] = newElem;
             clearInput();
@@ -165,23 +161,27 @@ void JAPM::on_pushButtonAddEntry_clicked()
     filterData();
 }
 
-void JAPM::setTableData(size_t i, const data_t & elem, bool showTags) {
-
+void JAPM::setTableData(size_t i, const data_t &elem, bool showTags) {
     if (showTags) {
-        QTableWidgetItem* itemName = new QTableWidgetItem(QString::fromStdString(elem.tagsToString()));
+        QTableWidgetItem *itemName =
+            new QTableWidgetItem(QString::fromStdString(elem.tagsToString()));
         ui->tableWidgetData->setItem(i, 0, itemName);
     }
 
-    QTableWidgetItem* itemName = new QTableWidgetItem(QString::fromStdString(elem.name));
+    QTableWidgetItem *itemName =
+        new QTableWidgetItem(QString::fromStdString(elem.name));
     ui->tableWidgetData->setItem(i, 0 + showTags, itemName);
 
-    QTableWidgetItem* itemLogin = new QTableWidgetItem(QString::fromStdString(elem.login));
+    QTableWidgetItem *itemLogin =
+        new QTableWidgetItem(QString::fromStdString(elem.login));
     ui->tableWidgetData->setItem(i, 1 + showTags, itemLogin);
 
-    QTableWidgetItem* itemPassword = new QTableWidgetItem(QString::fromStdString(elem.password));
+    QTableWidgetItem *itemPassword =
+        new QTableWidgetItem(QString::fromStdString(elem.password));
     ui->tableWidgetData->setItem(i, 2 + showTags, itemPassword);
 
-    QTableWidgetItem* itemInfo = new QTableWidgetItem(QString::fromStdString(elem.info));
+    QTableWidgetItem *itemInfo =
+        new QTableWidgetItem(QString::fromStdString(elem.info));
     ui->tableWidgetData->setItem(i, 3 + showTags, itemInfo);
 }
 
@@ -199,7 +199,10 @@ void JAPM::displayData() {
     if (showTags) {
         labels << "Tags";
     }
-    labels << "Name" << "Login" << "Password" << "Info";
+    labels << "Name"
+           << "Login"
+           << "Password"
+           << "Info";
     ui->tableWidgetData->setHorizontalHeaderLabels(labels);
     if (emptySearch) {
         for (size_t i = 0; i < n; ++i) {
@@ -210,10 +213,9 @@ void JAPM::displayData() {
             setTableData(i, data[visible[i]], showTags);
         }
     }
-
 }
 
-bool JAPM::findByName(const std::string & s, size_t & id) {
+bool JAPM::findByName(const std::string &s, size_t &id) {
     bool ans = false;
     for (size_t i = 0; i < data.size(); ++i) {
         if (s == data[i].name) {
@@ -225,9 +227,7 @@ bool JAPM::findByName(const std::string & s, size_t & id) {
     return ans;
 }
 
-void JAPM::on_pushButtonRemove_clicked()
-{
-
+void JAPM::on_pushButtonRemove_clicked() {
     std::string name = ui->lineEditRemoveName->text().toStdString();
     if (name.empty()) {
         QMessageBox::information(this, "Error", "Name is empty");
@@ -237,7 +237,9 @@ void JAPM::on_pushButtonRemove_clicked()
     bool exist = findByName(name, id);
     if (exist) {
         QMessageBox::StandardButton reply;
-        reply = QMessageBox::question(this, "Are you sure", "Do you want to remove this entry?", QMessageBox::Yes | QMessageBox::No);
+        reply = QMessageBox::question(this, "Are you sure",
+                                      "Do you want to remove this entry?",
+                                      QMessageBox::Yes | QMessageBox::No);
         if (reply == QMessageBox::Yes) {
             data.erase(data.begin() + id);
             ui->lineEditRemoveName->clear();
@@ -248,15 +250,9 @@ void JAPM::on_pushButtonRemove_clicked()
     }
 }
 
-void JAPM::on_checkBoxTags_stateChanged(int arg1)
-{
-    /* idk what is arg1, it was added automatically */
-    (void)arg1;
-    filterData();
-}
+void JAPM::on_checkBoxTags_stateChanged(int) { filterData(); }
 
-void JAPM::on_pushButtonSort_clicked()
-{
+void JAPM::on_pushButtonSort_clicked() {
     std::sort(data.begin(), data.end());
     filterData();
 }
@@ -276,7 +272,7 @@ void JAPM::filterData() {
             }
         } else {
             for (size_t i = 0; i < data.size(); ++i) {
-                for (const std::string & tag : data[i].tags) {
+                for (const std::string &tag : data[i].tags) {
                     if (pt.searchIn(tag)) {
                         visible.push_back(i);
                         break;
@@ -288,27 +284,13 @@ void JAPM::filterData() {
     displayData();
 }
 
-void JAPM::on_lineEditSearch_textEdited(const QString &arg1)
-{
-    /* idk what is arg1, it was added automatically */
-    (void)arg1;
+void JAPM::on_lineEditSearch_textEdited(const QString &) {
     visible.clear();
     filterData();
 }
 
-void JAPM::on_radioButtonName_clicked()
-{
-    filterData();
-}
+void JAPM::on_radioButtonName_clicked() { filterData(); }
 
-void JAPM::on_radioButtonTags_clicked()
-{
-    filterData();
-}
+void JAPM::on_radioButtonTags_clicked() { filterData(); }
 
-void JAPM::on_checkBoxCaseSensitive_stateChanged(int arg1)
-{
-    /* idk what is arg1, it was added automatically */
-    (void)arg1;
-    filterData();
-}
+void JAPM::on_checkBoxCaseSensitive_stateChanged(int) { filterData(); }
