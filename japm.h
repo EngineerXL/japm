@@ -35,17 +35,17 @@ class JAPM : public QMainWindow {
 
     void on_pushButtonRemove_clicked();
 
-    void on_checkBoxTags_stateChanged(int arg1);
+    void on_checkBoxTags_stateChanged(int);
 
     void on_pushButtonSort_clicked();
 
-    void on_lineEditSearch_textEdited(const QString &arg1);
+    void on_lineEditSearch_textEdited(const QString &);
 
     void on_radioButtonName_clicked();
 
     void on_radioButtonTags_clicked();
 
-    void on_checkBoxCaseSensitive_stateChanged(int arg1);
+    void on_checkBoxCaseSensitive_stateChanged(int);
 
    private:
     Ui::JAPM *ui;
